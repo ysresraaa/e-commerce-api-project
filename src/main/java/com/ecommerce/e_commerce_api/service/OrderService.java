@@ -1,4 +1,3 @@
-
 package com.ecommerce.e_commerce_api.service;
 
 import com.ecommerce.e_commerce_api.dto.OrderResponseDTO;
@@ -9,8 +8,8 @@ import com.ecommerce.e_commerce_api.mapper.OrderMapper;
 import com.ecommerce.e_commerce_api.model.*;
 import com.ecommerce.e_commerce_api.repository.IOrderRepository;
 import com.ecommerce.e_commerce_api.repository.IProductRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,7 +25,6 @@ public class OrderService {
     private final IProductRepository productRepository;
     private final OrderMapper orderMapper;
 
-
     public OrderService(IOrderRepository orderRepository, CustomerService customerService, CartService cartService, IProductRepository productRepository, OrderMapper orderMapper) {
         this.orderRepository = orderRepository;
         this.customerService = customerService;
@@ -37,29 +35,33 @@ public class OrderService {
 
     @Transactional
     public OrderResponseDTO placeOrder(Long customerId) {
-        Cart cart = cartService.getCartByCustomerId(customerId);
+        Cart cart = cartService.getCartModelByCustomerId(customerId);
 
         if (cart.getItems() == null || cart.getItems().isEmpty()) {
             throw new EmptyCartException("Cannot create order from an empty cart.");
         }
 
-        Order order = new Order();
-        order.setCustomer(cart.getCustomer());
-        order.setOrderDate(LocalDateTime.now());
-        order.setStatus(OrderStatus.PENDING); // Sipariş başlangıç durumunu ayarla
-        order.setTotalPrice(cart.getTotalPrice());
-        order.setOrderCode(UUID.randomUUID().toString()); // <-- BURADA BENZERSİZ BİR SİPARİŞ KODU OLUŞTURULUYOR
+
+        String uniqueOrderCode = "ECOM-" + UUID.randomUUID().toString().toUpperCase().substring(0, 11);
+
+
+        Order order = Order.builder()
+                .customer(cart.getCustomer())
+                .orderDate(LocalDateTime.now())
+                .status(OrderStatus.PENDING)
+                .totalPrice(cart.getTotalPrice())
+                .orderCode(uniqueOrderCode)
+                .build();
 
         List<OrderItem> orderItems = cart.getItems().stream().map(cartItem -> {
             Product product = cartItem.getProduct();
             int requestedQuantity = cartItem.getQuantity();
 
-
             if (product.getStock() < requestedQuantity) {
                 throw new InsufficientStockException("Not enough stock for product: " + product.getName());
             }
             product.setStock(product.getStock() - requestedQuantity);
-            productRepository.save(product);
+
 
             OrderItem orderItem = new OrderItem();
             orderItem.setProduct(product);
@@ -74,29 +76,26 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
         cartService.clearCart(customerId);
 
-
         return orderMapper.toResponseDTO(savedOrder);
     }
 
-
     public List<OrderResponseDTO> getAllOrdersForCustomer(Long customerId) {
         Customer customer = customerService.getCustomerById(customerId);
-        List<Order> orders = orderRepository.findByCustomer(customer);
-
+        List<Order> orders = orderRepository.findAllByCustomer_Id(customerId);
         return orderMapper.toResponseDTOList(orders);
     }
 
-    public OrderResponseDTO getOrderById(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
-
+    public OrderResponseDTO getOrderByIdAndCustomerId(Long orderId, Long customerId) {
+        Order order = orderRepository.findByIdAndCustomer_Id(orderId, customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId + " for this customer."));
         return orderMapper.toResponseDTO(order);
     }
 
 
-    public OrderResponseDTO getOrderByOrderCode(String orderCode) {
-        Order order = orderRepository.findByOrderCode(orderCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with order code: " + orderCode));
+    public OrderResponseDTO getOrderByOrderCodeAndCustomerId(String orderCode, Long customerId) {
+
+        Order order = orderRepository.findByOrderCodeAndCustomer_Id(orderCode, customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with code: " + orderCode + " for this customer."));
         return orderMapper.toResponseDTO(order);
     }
 }

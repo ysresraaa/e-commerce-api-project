@@ -1,16 +1,13 @@
-
 package com.ecommerce.e_commerce_api.controller;
 
 import com.ecommerce.e_commerce_api.dto.CreateProductRequestDTO;
 import com.ecommerce.e_commerce_api.dto.ProductResponseDTO;
 import com.ecommerce.e_commerce_api.service.ProductService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
-
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -18,8 +15,13 @@ import java.util.List;
 @RequestMapping("/api/products")
 public class ProductController {
 
-    @Autowired
-    private ProductService productService;
+
+    private final ProductService productService;
+
+
+    public ProductController(ProductService productService) {
+        this.productService = productService;
+    }
 
 
     @GetMapping
@@ -33,6 +35,7 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
+
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ProductResponseDTO> createProduct(@Valid @RequestBody CreateProductRequestDTO requestDTO) {
@@ -40,12 +43,14 @@ public class ProductController {
         return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
 
+
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @Valid @RequestBody CreateProductRequestDTO requestDTO) {
         ProductResponseDTO updatedProduct = productService.updateProduct(id, requestDTO);
         return ResponseEntity.ok(updatedProduct);
     }
+
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")

@@ -57,7 +57,7 @@ public class Customer extends BaseEntity implements UserDetails {
         if (this.role == null) {
             return List.of();
         }
-        return List.of(new SimpleGrantedAuthority(this.role.name()));
+        return List.of(new SimpleGrantedAuthority("ROLE_"+this.role.name()));
     }
 
     @Override

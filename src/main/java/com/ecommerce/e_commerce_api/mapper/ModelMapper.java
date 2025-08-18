@@ -27,7 +27,7 @@ public class ModelMapper {
 
         return CustomerResponseDTO.builder()
                 .id(customer.getId())
-                .name(fullName)
+                .fullName(fullName)
                 .email(customer.getEmail())
                 .build();
     }

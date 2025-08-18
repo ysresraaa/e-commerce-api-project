@@ -1,4 +1,3 @@
-
 package com.ecommerce.e_commerce_api.config;
 
 import com.ecommerce.e_commerce_api.security.JwtAuthenticationFilter;
@@ -28,7 +27,13 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(req ->
-                        req.requestMatchers("/api/auth/**")
+                        req.requestMatchers(
+                                        "/api/auth/**",
+                                        // Swagger/OpenAPI için erişim izinleri (varsa)
+                                        "/v3/api-docs/**",
+                                        "/swagger-ui/**",
+                                        "/swagger-ui.html"
+                                )
                                 .permitAll()
                                 .anyRequest()
                                 .authenticated()

@@ -1,15 +1,14 @@
-// OrderController.java
+
 package com.ecommerce.e_commerce_api.controller;
 
 import com.ecommerce.e_commerce_api.dto.OrderResponseDTO;
 import com.ecommerce.e_commerce_api.service.OrderService;
+import com.ecommerce.e_commerce_api.model.Customer;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import com.ecommerce.e_commerce_api.model.Customer;
-
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -26,57 +25,40 @@ public class OrderController {
 
     private Long getAuthenticatedCustomerId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal() instanceof String) {
-            throw new AccessDeniedException("User not authenticated.");
+        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof Customer)) {
+
+            throw new org.springframework.security.access.AccessDeniedException("User not authenticated or principal is not of expected type Customer.");
         }
         Customer authenticatedCustomer = (Customer) authentication.getPrincipal();
         return authenticatedCustomer.getId();
     }
 
-    @PostMapping("/{customerId}")
-    public ResponseEntity<OrderResponseDTO> placeOrder(@PathVariable Long customerId) {
+    @PostMapping
+    public ResponseEntity<OrderResponseDTO> placeOrderForAuthenticatedUser() {
         Long authenticatedCustomerId = getAuthenticatedCustomerId();
-        if (!authenticatedCustomerId.equals(customerId)) {
-            throw new AccessDeniedException("You are not authorized to place an order for this customer.");
-        }
-        OrderResponseDTO order = orderService.placeOrder(customerId);
-        return ResponseEntity.ok(order);
+        OrderResponseDTO order = orderService.placeOrder(authenticatedCustomerId);
+        return new ResponseEntity<>(order, HttpStatus.CREATED);
     }
 
-
-    @GetMapping("/customer/{customerId}")
-    public ResponseEntity<List<OrderResponseDTO>> getAllOrdersForCustomer(@PathVariable Long customerId) {
+    @GetMapping("/my-orders")
+    public ResponseEntity<List<OrderResponseDTO>> getAllOrdersForAuthenticatedCustomer() {
         Long authenticatedCustomerId = getAuthenticatedCustomerId();
-        if (!authenticatedCustomerId.equals(customerId)) {
-            throw new AccessDeniedException("You are not authorized to view orders for this customer.");
-        }
-        List<OrderResponseDTO> orders = orderService.getAllOrdersForCustomer(customerId);
+        List<OrderResponseDTO> orders = orderService.getAllOrdersForCustomer(authenticatedCustomerId);
         return ResponseEntity.ok(orders);
     }
 
-
     @GetMapping("/{orderId}")
-    public ResponseEntity<OrderResponseDTO> getOrderById(@PathVariable Long orderId) {
-        // Retrieve the order first to check its customerId
-        OrderResponseDTO order = orderService.getOrderById(orderId);
-
+    public ResponseEntity<OrderResponseDTO> getOrderByIdForAuthenticatedUser(@PathVariable Long orderId) {
         Long authenticatedCustomerId = getAuthenticatedCustomerId();
-        if (!authenticatedCustomerId.equals(order.getCustomerId())) { // Check if the order belongs to the authenticated user
-            throw new AccessDeniedException("You are not authorized to view this order.");
-        }
 
+        OrderResponseDTO order = orderService.getOrderByIdAndCustomerId(orderId, authenticatedCustomerId);
         return ResponseEntity.ok(order);
     }
 
-
     @GetMapping("/code/{orderCode}")
-    public ResponseEntity<OrderResponseDTO> getOrderByOrderCode(@PathVariable String orderCode) {
-        OrderResponseDTO order = orderService.getOrderByOrderCode(orderCode);
-
+    public ResponseEntity<OrderResponseDTO> getOrderByCodeForAuthenticatedUser(@PathVariable String orderCode) {
         Long authenticatedCustomerId = getAuthenticatedCustomerId();
-        if (!authenticatedCustomerId.equals(order.getCustomerId())) {
-            throw new AccessDeniedException("You are not authorized to view this order with this code.");
-        }
+        OrderResponseDTO order = orderService.getOrderByOrderCodeAndCustomerId(orderCode, authenticatedCustomerId);
         return ResponseEntity.ok(order);
     }
 }
