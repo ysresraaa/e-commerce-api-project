@@ -3,10 +3,6 @@
 
 This project is a comprehensive e-commerce platform backend service developed using Spring Boot. It provides all the essential RESTful endpoints for managing customers, products, carts, and orders within a secure, role-based system. The project's main focus is on robust security implemented with JWT (JSON Web Tokens), detailed business logic, and relational database management.
 
-# Spring Boot E-Commerce REST API
-
-This project is a comprehensive e-commerce platform backend service developed using Spring Boot. It provides all the essential RESTful endpoints for managing customers, products, carts, and orders within a secure, role-based system. The project's main focus is on robust security implemented with JWT (JSON Web Tokens), detailed business logic, and relational database management.
-
 ##  Key Features & Business Logic
 
 ### Security Architecture:
