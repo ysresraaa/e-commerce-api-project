@@ -11,6 +11,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/customers")
 public class CustomerController {
@@ -22,33 +24,27 @@ public class CustomerController {
     }
 
 
-    @GetMapping("/me")
-    public ResponseEntity<CustomerResponseDTO> getMyProfile() {
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<CustomerResponseDTO>>getAllCustomers() {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Customer authenticatedCustomer = (Customer) authentication.getPrincipal();
-        Long customerId = authenticatedCustomer.getId();
-
-
-        CustomerResponseDTO customerDTO = customerService.getCustomerProfileById(customerId);
-        return ResponseEntity.ok(customerDTO);
+        return ResponseEntity.ok(customerService.getAllCustomers());
     }
 
 
-    @PutMapping("/me")
-    public ResponseEntity<CustomerResponseDTO> updateMyProfile(@Valid @RequestBody UpdateCustomerRequestDTO requestDTO) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Customer authenticatedCustomer = (Customer) authentication.getPrincipal();
-        Long customerId = authenticatedCustomer.getId();
-
-        CustomerResponseDTO updatedCustomer = customerService.updateCustomerProfile(customerId, requestDTO);
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or #id==authentication.principal.id")
+    public ResponseEntity<CustomerResponseDTO> updateCustomerProfile( @PathVariable Long id,@Valid @RequestBody UpdateCustomerRequestDTO requestDTO) {
+        CustomerResponseDTO updatedCustomer=customerService.updateCustomerProfile(id,requestDTO);
         return ResponseEntity.ok(updatedCustomer);
+
+
     }
 
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CustomerResponseDTO> getCustomerByIdForAdmin(@PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN') or #id==authentication.principal.id ")
+    public ResponseEntity<CustomerResponseDTO> getCustomeProfile(@PathVariable Long id) {
         CustomerResponseDTO customerDTO = customerService.getCustomerProfileById(id);
         return ResponseEntity.ok(customerDTO);
     }

@@ -5,8 +5,8 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.4</version> <!-- Lütfen bu Spring Boot versiyonunun doğru ve stabil olduğundan emin olun. Genellikle 3.2.x veya 3.3.x (ileride) beklenir. -->
-        <relativePath/> <!-- lookup parent from repository -->
+        <version>3.5.4</version>
+        <relativePath/>
     </parent>
     <groupId>com.ecommerce</groupId>
     <artifactId>e-commerce-api</artifactId>
@@ -28,10 +28,10 @@
     </scm>
     <properties>
         <java.version>17</java.version>
-        <org.mapstruct.version>1.5.5.Final</org.mapstruct.version> <!-- En son stabil sürümünü kontrol edin -->
-        <lombok.version>1.18.30</lombok.version> <!-- Kullandığınız Lombok versiyonu -->
-        <maven.compiler.source>17</maven.compiler.source> <!-- Kullandığınız Java versiyonu -->
-        <maven.compiler.target>17</maven.compiler.target> <!-- Kullandığınız Java versiyonu -->
+        <org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
+        <lombok.version>1.18.30</lombok.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
     </properties>
     <dependencies>
         <dependency>
@@ -50,12 +50,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-
-        <!-- Spring Boot Starter Security zaten yukarıda var, bir daha eklemenize gerek yok -->
-        <!-- <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency> -->
 
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -112,39 +106,39 @@
 
     <build>
         <plugins>
-            <!-- Düzeltilmiş maven-compiler-plugin tanımı -->
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version> <!-- Compiler plugin sürümünü ekledik -->
+                <version>3.8.1</version>
                 <configuration>
                     <annotationProcessorPaths>
-                        <!-- MapStruct işlemcisini ekledik -->
+
                         <path>
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>
                             <version>${org.mapstruct.version}</version>
                         </path>
-                        <!-- Lombok işlemcisini ekledik -->
+
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version> <!-- Lombok versiyonunu da belirtmek iyi uygulama -->
+                            <version>${lombok.version}</version>
                         </path>
-                        <!-- Lombok ve MapStruct beraber kullanıldığında gerekli olan bağlayıcıyı ekledik -->
+
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok-mapstruct-binding</artifactId>
-                            <version>0.2.0</version> <!-- Bu versiyonu sabit tutmak genellikle güvenlidir -->
+                            <version>0.2.0</version>
                         </path>
                     </annotationProcessorPaths>
-                    <!-- Java versiyonlarını da açıkça belirttik -->
+
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                 </configuration>
             </plugin>
 
-            <!-- spring-boot-maven-plugin tanımı (kendi içinde başka plugin tanımları olmadan) -->
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -156,8 +150,7 @@
                         </exclude>
                     </excludes>
                 </configuration>
-                <!-- Eğer spring-boot-maven-plugin için özel bir versiyon belirtmeniz gerekirse buraya ekleyebilirsiniz: -->
-                <!-- <version>3.2.5</version> gibi -->
+
             </plugin>
         </plugins>
     </build>

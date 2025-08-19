@@ -24,12 +24,14 @@ public class ProductController {
     }
 
 
+    @PreAuthorize("permitAll")
     @GetMapping
     public ResponseEntity<List<ProductResponseDTO>> getAllProducts() {
         return ResponseEntity.ok(productService.getAllProducts());
     }
 
 
+    @PreAuthorize("permitAll")
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getProductById(id));

@@ -9,10 +9,11 @@ import com.ecommerce.e_commerce_api.mapper.CustomerMapper;
 import com.ecommerce.e_commerce_api.model.Customer;
 import com.ecommerce.e_commerce_api.model.Role;
 import com.ecommerce.e_commerce_api.repository.ICustomerRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 
 @Service
 public class CustomerService {
@@ -28,27 +29,29 @@ public class CustomerService {
     }
 
 
+    @Transactional(readOnly = true)
+    public List<CustomerResponseDTO> getAllCustomers() {
+        List<Customer> customers = customerRepository.findAll();
+        return customerMapper.toResponseDTOList(customers);
+    }
 
-    @Transactional
+
+    @Transactional(readOnly = true)
     public CustomerResponseDTO getCustomerProfileById(Long customerId) {
-        Customer customer = getCustomerById(customerId);
+        Customer customer = findCustomerEntityById(customerId);
         return customerMapper.toResponseDTO(customer);
     }
 
+
     @Transactional
     public CustomerResponseDTO updateCustomerProfile(Long customerId, UpdateCustomerRequestDTO requestDTO) {
-        Customer existingCustomer = getCustomerById(customerId);
+        Customer existingCustomer = findCustomerEntityById(customerId);
 
 
         if (requestDTO.getFullName() != null && !requestDTO.getFullName().isBlank()) {
-
             String[] nameParts = requestDTO.getFullName().trim().split("\\s+", 2);
             existingCustomer.setFirstName(nameParts[0]);
-            if (nameParts.length > 1) {
-                existingCustomer.setLastName(nameParts[1]);
-            } else {
-                existingCustomer.setLastName("");
-            }
+            existingCustomer.setLastName(nameParts.length > 1 ? nameParts[1] : "");
         }
 
 
@@ -61,7 +64,6 @@ public class CustomerService {
     }
 
 
-
     @Transactional
     public CustomerResponseDTO createCustomer(CreateCustomerRequestDTO requestDTO) {
         if (customerRepository.findByEmail(requestDTO.getEmail()).isPresent()) {
@@ -72,7 +74,6 @@ public class CustomerService {
         newCustomer.setFirstName(requestDTO.getFirstName());
         newCustomer.setLastName(requestDTO.getLastName());
         newCustomer.setEmail(requestDTO.getEmail());
-
         newCustomer.setPassword(passwordEncoder.encode(requestDTO.getPassword()));
         newCustomer.setRole(Role.USER);
 
@@ -80,17 +81,15 @@ public class CustomerService {
         return customerMapper.toResponseDTO(savedCustomer);
     }
 
-    public void deleteCustomer(Long id) {
 
-        if (!customerRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Customer not found with id:" + id);
-        }
-        customerRepository.deleteById(id);
+    @Transactional
+    public void deleteCustomer(Long id) {
+        Customer customerToDelete = findCustomerEntityById(id);
+        customerRepository.delete(customerToDelete);
     }
 
-
-    public Customer getCustomerById(Long id) {
+    public Customer findCustomerEntityById(Long id) {
         return customerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id:" + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
     }
 }

@@ -1,13 +1,10 @@
-
 package com.ecommerce.e_commerce_api.controller;
 
 import com.ecommerce.e_commerce_api.dto.OrderResponseDTO;
 import com.ecommerce.e_commerce_api.service.OrderService;
-import com.ecommerce.e_commerce_api.model.Customer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,43 +19,34 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-
-    private Long getAuthenticatedCustomerId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof Customer)) {
-
-            throw new org.springframework.security.access.AccessDeniedException("User not authenticated or principal is not of expected type Customer.");
-        }
-        Customer authenticatedCustomer = (Customer) authentication.getPrincipal();
-        return authenticatedCustomer.getId();
-    }
-
     @PostMapping
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<OrderResponseDTO> placeOrderForAuthenticatedUser() {
-        Long authenticatedCustomerId = getAuthenticatedCustomerId();
-        OrderResponseDTO order = orderService.placeOrder(authenticatedCustomerId);
+        OrderResponseDTO order = orderService.placeOrderForCurrentUser();
         return new ResponseEntity<>(order, HttpStatus.CREATED);
     }
 
     @GetMapping("/my-orders")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<List<OrderResponseDTO>> getAllOrdersForAuthenticatedCustomer() {
-        Long authenticatedCustomerId = getAuthenticatedCustomerId();
-        List<OrderResponseDTO> orders = orderService.getAllOrdersForCustomer(authenticatedCustomerId);
+
+        List<OrderResponseDTO> orders = orderService.getAllOrdersForCurrentUser();
         return ResponseEntity.ok(orders);
     }
 
     @GetMapping("/{orderId}")
+    @PreAuthorize("hasRole('USER') and @orderService.isOwnerOfOrder(#orderId, authentication.principal.id)")
     public ResponseEntity<OrderResponseDTO> getOrderByIdForAuthenticatedUser(@PathVariable Long orderId) {
-        Long authenticatedCustomerId = getAuthenticatedCustomerId();
 
-        OrderResponseDTO order = orderService.getOrderByIdAndCustomerId(orderId, authenticatedCustomerId);
+        OrderResponseDTO order = orderService.getOrderById(orderId);
         return ResponseEntity.ok(order);
     }
 
     @GetMapping("/code/{orderCode}")
+    @PreAuthorize("hasRole('USER') and @orderService.isOwnerOfOrderCode(#orderCode, authentication.principal.id)")
     public ResponseEntity<OrderResponseDTO> getOrderByCodeForAuthenticatedUser(@PathVariable String orderCode) {
-        Long authenticatedCustomerId = getAuthenticatedCustomerId();
-        OrderResponseDTO order = orderService.getOrderByOrderCodeAndCustomerId(orderCode, authenticatedCustomerId);
+
+        OrderResponseDTO order = orderService.getOrderByOrderCode(orderCode);
         return ResponseEntity.ok(order);
     }
 }
