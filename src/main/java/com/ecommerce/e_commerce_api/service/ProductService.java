@@ -2,53 +2,47 @@ package com.ecommerce.e_commerce_api.service;
 
 import com.ecommerce.e_commerce_api.dto.CreateProductRequestDTO;
 import com.ecommerce.e_commerce_api.dto.ProductResponseDTO;
+import com.ecommerce.e_commerce_api.exception.InsufficientStockException;
 import com.ecommerce.e_commerce_api.exception.ResourceNotFoundException;
 import com.ecommerce.e_commerce_api.mapper.ProductMapper;
 import com.ecommerce.e_commerce_api.model.Product;
-import com.ecommerce.e_commerce_api.repository.IProductRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.ecommerce.e_commerce_api.repository.ProductRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService {
 
-    private final IProductRepository productRepository;
+    private final ProductRepository productRepository;
     private final ProductMapper productMapper;
-
-    public ProductService(IProductRepository productRepository ,ProductMapper productMapper){
-        this.productRepository=productRepository;
-        this.productMapper=productMapper;
-    }
 
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> getAllProducts() {
-        List<Product>products=productRepository.findAll();
+        List<Product> products = productRepository.findAll();
         return productMapper.toResponseDTOList(products);
-
     }
 
     @Transactional(readOnly = true)
-    public ProductResponseDTO getProductById(Long id) {
-     Product product=findProductEntityById(id);
-     return productMapper.toResponseDTO(product);
+    public ProductResponseDTO getProductByCode(UUID productCode) {
+        Product product = findProductEntityByCode(productCode);
+        return productMapper.toResponseDTO(product);
     }
 
     @Transactional
     public ProductResponseDTO createProduct(CreateProductRequestDTO requestDTO) {
-        Product product=productMapper.toEntity(requestDTO);
-        Product savedProduct=productRepository.save(product);
+        Product product = productMapper.toEntity(requestDTO);
+        Product savedProduct = productRepository.save(product);
         return productMapper.toResponseDTO(savedProduct);
-
     }
 
     @Transactional
-    public ProductResponseDTO updateProduct(Long id, CreateProductRequestDTO requestDTO) {
-        Product existingProduct = findProductEntityById(id);
-
+    public ProductResponseDTO updateProduct(UUID productCode, CreateProductRequestDTO requestDTO) {
+        Product existingProduct = findProductEntityByCode(productCode);
 
         existingProduct.setName(requestDTO.getName());
         existingProduct.setDescription(requestDTO.getDescription());
@@ -60,14 +54,29 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(Long id) {
-        Product productToDelete=findProductEntityById(id);
+    public void deleteProduct(UUID productCode) {
+        Product productToDelete = findProductEntityByCode(productCode);
         productRepository.delete(productToDelete);
     }
 
-@Transactional(readOnly = true)
-    public Product findProductEntityById(Long id) {
-        return productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + id));
+    @Transactional
+    public void decreaseStock(UUID productCode, int quantity) {
+        Product product = findProductEntityByCode(productCode);
+
+        if (product.getStock() < quantity) {
+            throw new InsufficientStockException(
+                    "Not enough stock for product: " + product.getName() +
+                            ". Required: " + quantity + ", Available: " + product.getStock()
+            );
+        }
+
+        product.setStock(product.getStock() - quantity);
+        productRepository.save(product);
+    }
+
+    @Transactional(readOnly = true)
+    public Product findProductEntityByCode(UUID productCode) {
+        return productRepository.findByProductCode(productCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with code: " + productCode));
     }
 }

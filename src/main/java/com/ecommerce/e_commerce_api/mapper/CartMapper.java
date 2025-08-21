@@ -8,27 +8,29 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
+import java.util.stream.Collectors;
+
 @Mapper(componentModel = "spring")
 public interface CartMapper {
 
-    @Mapping(source = "product.id", target = "productId")
+
+    @Mapping(source = "product.productCode", target = "productCode")
     @Mapping(source = "product.name", target = "productName")
     @Mapping(source = "product.price", target = "productPrice")
     @Mapping(target = "subtotal", expression = "java(cartItem.getProduct().getPrice().multiply(java.math.BigDecimal.valueOf(cartItem.getQuantity())))")
     CartItemResponseDTO toCartItemDto(CartItem cartItem);
 
     @Mapping(source = "customer.id", target = "customerId")
-    @Mapping(source = "items", target = "items", qualifiedByName = "mapCartItems")
+
+    @Mapping(source = "items", target = "items")
     CartResponseDTO toDto(Cart cart);
 
-
-    @Named("mapCartItems")
     default java.util.List<CartItemResponseDTO> mapCartItems(java.util.Set<CartItem> cartItems) {
         if (cartItems == null) {
-            return null;
+            return java.util.Collections.emptyList();
         }
         return cartItems.stream()
                 .map(this::toCartItemDto)
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
     }
 }

@@ -1,4 +1,3 @@
-// GlobalExceptionHandler.java
 package com.ecommerce.e_commerce_api.exception;
 
 import org.springframework.http.HttpStatus;
@@ -26,9 +25,9 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(AccessDeniedException.class) // <-- BU METODU EKLEYİN
+    @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<String> handleAccessDeniedException(AccessDeniedException ex) {
-        return new ResponseEntity<>(ex.getMessage(), HttpStatus.FORBIDDEN); // 403 Forbidden
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

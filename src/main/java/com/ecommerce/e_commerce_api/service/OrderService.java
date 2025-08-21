@@ -2,118 +2,91 @@ package com.ecommerce.e_commerce_api.service;
 
 import com.ecommerce.e_commerce_api.dto.OrderResponseDTO;
 import com.ecommerce.e_commerce_api.exception.EmptyCartException;
-import com.ecommerce.e_commerce_api.exception.InsufficientStockException;
 import com.ecommerce.e_commerce_api.exception.ResourceNotFoundException;
 import com.ecommerce.e_commerce_api.mapper.OrderMapper;
 import com.ecommerce.e_commerce_api.model.*;
-import com.ecommerce.e_commerce_api.repository.IOrderRepository;
+import com.ecommerce.e_commerce_api.repository.OrderRepository;
+import com.ecommerce.e_commerce_api.security.UserPrincipal;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class OrderService {
 
-    private final IOrderRepository orderRepository;
+    private final OrderRepository orderRepository;
     private final CartService cartService;
+    private final ProductService productService;
+    private final CustomerService customerService;
+    private final AuthenticationService authenticationService;
     private final OrderMapper orderMapper;
-
-    public OrderService(IOrderRepository orderRepository, CartService cartService, OrderMapper orderMapper) {
-        this.orderRepository = orderRepository;
-        this.cartService = cartService;
-        this.orderMapper = orderMapper;
-    }
-
 
     @Transactional
     public OrderResponseDTO placeOrderForCurrentUser() {
-        Customer authenticatedCustomer = getAuthenticatedCustomer();
-        return placeOrder(authenticatedCustomer);
+        UUID customerCode = authenticationService.getAuthenticatedCustomerCode();
+        Customer authenticatedCustomer = customerService.findCustomerEntityByCode(customerCode);
+        Cart cart = cartService.getCartModelByCustomerCode(customerCode);
+
+        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+            throw new EmptyCartException("Cannot create order from an empty cart.");
+        }
+
+        Order order = new Order();
+        order.setCustomer(authenticatedCustomer);
+        order.setStatus(OrderStatus.PENDING);
+        order.setOrderCode(UUID.randomUUID());
+
+        List<OrderItem> orderItems = cart.getItems().stream().map(cartItem -> {
+            Product product = cartItem.getProduct();
+            productService.decreaseStock(product.getProductCode(), cartItem.getQuantity());
+            return OrderItem.builder()
+                    .product(product)
+                    .quantity(cartItem.getQuantity())
+                    .priceAtPurchase(product.getPrice())
+                    .order(order)
+                    .build();
+        }).collect(Collectors.toList());
+
+        order.setOrderItems(orderItems);
+        Order savedOrder = orderRepository.save(order);
+        cartService.clearCartForCurrentUser();
+        return orderMapper.toResponseDTO(savedOrder);
     }
 
-
-    public List<OrderResponseDTO> getAllOrdersForCurrentUser() {
-        Customer authenticatedCustomer = getAuthenticatedCustomer();
-        List<Order> orders = orderRepository.findAllByCustomer_Id(authenticatedCustomer.getId());
-        return orderMapper.toResponseDTOList(orders);
+    @Transactional(readOnly = true)
+    public Page<OrderResponseDTO> getOrdersForCurrentUser(Pageable pageable) {
+        Long customerId = authenticationService.getAuthenticatedCustomerId();
+        Page<Order> orderPage = orderRepository.findByCustomerId(customerId, pageable);
+        return orderPage.map(orderMapper::toResponseDTO);
     }
 
-
-    public OrderResponseDTO getOrderById(Long orderId) {
-        return orderRepository.findById(orderId)
-                .map(orderMapper::toResponseDTO)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+    @Transactional(readOnly = true)
+    public Page<OrderResponseDTO> getOrdersByCustomerCode(UUID customerCode, Pageable pageable) {
+        Page<Order> orderPage = orderRepository.findByCustomerCustomerCode(customerCode, pageable);
+        return orderPage.map(orderMapper::toResponseDTO);
     }
 
-
-    public OrderResponseDTO getOrderByOrderCode(String orderCode) {
+    @Transactional(readOnly = true)
+    public OrderResponseDTO getOrderByOrderCode(UUID orderCode) {
         return orderRepository.findByOrderCode(orderCode)
                 .map(orderMapper::toResponseDTO)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with code: " + orderCode));
     }
 
-
-    public boolean isOwnerOfOrder(Long orderId, Long customerId) {
-        return orderRepository.findById(orderId)
-                .map(order -> order.getCustomer().getId().equals(customerId))
-                .orElse(false);
-    }
-
-    public boolean isOwnerOfOrderCode(String orderCode, Long customerId) {
-        return orderRepository.findByOrderCode(orderCode)
-                .map(order -> order.getCustomer().getId().equals(customerId))
-                .orElse(false);
-    }
-
-    private Customer getAuthenticatedCustomer() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof Customer)) {
-            throw new org.springframework.security.access.AccessDeniedException("User not authenticated.");
+    public boolean isOwnerOfOrder(Authentication authentication, UUID orderCode) {
+        Order order = orderRepository.findByOrderCode(orderCode).orElse(null);
+        if (order == null) {
+            return false;
         }
-        return (Customer) authentication.getPrincipal();
-    }
-
-    @Transactional
-    protected OrderResponseDTO placeOrder(Customer customer) {
-        Cart cart = cartService.getCartModelByCustomerId(customer.getId());
-        if (cart.getItems() == null || cart.getItems().isEmpty()) {
-            throw new EmptyCartException("Cannot create order from an empty cart.");
-        }
-        String uniqueOrderCode = "ECOM-" + UUID.randomUUID().toString().toUpperCase().substring(0, 11);
-        Order order = Order.builder()
-                .customer(customer)
-                .orderDate(LocalDateTime.now())
-                .status(OrderStatus.PENDING)
-                .totalPrice(cart.getTotalPrice())
-                .orderCode(uniqueOrderCode)
-                .build();
-        List<OrderItem> orderItems = cart.getItems().stream().map(cartItem -> {
-            Product product = cartItem.getProduct();
-            int requestedQuantity = cartItem.getQuantity();
-            if (product.getStock() < requestedQuantity) {
-                throw new InsufficientStockException("Not enough stock for product: " + product.getName());
-            }
-            product.setStock(product.getStock() - requestedQuantity);
-
-            OrderItem orderItem = new OrderItem();
-            orderItem.setProduct(product);
-            orderItem.setQuantity(requestedQuantity);
-            orderItem.setPrice(cartItem.getPrice());
-            orderItem.setOrder(order);
-            return orderItem;
-        }).collect(Collectors.toList());
-
-        order.setItems(orderItems);
-        Order savedOrder = orderRepository.save(order);
-
-        cartService.clearCartForCurrentUser();
-
-        return orderMapper.toResponseDTO(savedOrder);
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        return order.getCustomer().getId().equals(principal.getId());
     }
 }

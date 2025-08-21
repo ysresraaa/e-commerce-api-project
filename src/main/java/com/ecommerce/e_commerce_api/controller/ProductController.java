@@ -4,25 +4,21 @@ import com.ecommerce.e_commerce_api.dto.CreateProductRequestDTO;
 import com.ecommerce.e_commerce_api.dto.ProductResponseDTO;
 import com.ecommerce.e_commerce_api.service.ProductService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/products")
+@RequiredArgsConstructor
 public class ProductController {
 
-
     private final ProductService productService;
-
-
-    public ProductController(ProductService productService) {
-        this.productService = productService;
-    }
-
 
     @PreAuthorize("permitAll")
     @GetMapping
@@ -30,13 +26,11 @@ public class ProductController {
         return ResponseEntity.ok(productService.getAllProducts());
     }
 
-
     @PreAuthorize("permitAll")
-    @GetMapping("/{id}")
-    public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Long id) {
-        return ResponseEntity.ok(productService.getProductById(id));
+    @GetMapping("/{productCode}")
+    public ResponseEntity<ProductResponseDTO> getProductByCode(@PathVariable UUID productCode) {
+        return ResponseEntity.ok(productService.getProductByCode(productCode));
     }
-
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
@@ -45,19 +39,17 @@ public class ProductController {
         return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
 
-
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}")
-    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @Valid @RequestBody CreateProductRequestDTO requestDTO) {
-        ProductResponseDTO updatedProduct = productService.updateProduct(id, requestDTO);
+    @PutMapping("/{productCode}")
+    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable UUID productCode, @Valid @RequestBody CreateProductRequestDTO requestDTO) {
+        ProductResponseDTO updatedProduct = productService.updateProduct(productCode, requestDTO);
         return ResponseEntity.ok(updatedProduct);
     }
 
-
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
-        productService.deleteProduct(id);
+    @DeleteMapping("/{productCode}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable UUID productCode) {
+        productService.deleteProduct(productCode);
         return ResponseEntity.noContent().build();
     }
 }

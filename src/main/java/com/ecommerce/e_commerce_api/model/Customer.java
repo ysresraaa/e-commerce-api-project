@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "customers")
@@ -22,9 +23,11 @@ import java.util.List;
 @SuperBuilder
 public class Customer extends BaseEntity implements UserDetails {
 
+    @Column(name = "customer_code", nullable = false, unique = true, updatable = false)
+    private UUID customerCode;
+
     @Column(nullable = false)
     private String firstName;
-
 
     @Column(nullable = false)
     private String lastName;
@@ -34,7 +37,6 @@ public class Customer extends BaseEntity implements UserDetails {
 
     @Column(nullable = false)
     private String password;
-
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -46,11 +48,9 @@ public class Customer extends BaseEntity implements UserDetails {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Order> orders;
 
-
     public String getFullName() {
         return (this.firstName + " " + this.lastName).trim();
     }
-
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

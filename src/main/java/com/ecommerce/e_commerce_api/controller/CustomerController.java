@@ -1,17 +1,15 @@
 package com.ecommerce.e_commerce_api.controller;
 
 import com.ecommerce.e_commerce_api.dto.CustomerResponseDTO;
-import com.ecommerce.e_commerce_api.dto.UpdateCustomerRequestDTO;
-import com.ecommerce.e_commerce_api.model.Customer;
+import com.ecommerce.e_commerce_api.dto.UpdateCustomerRequest;
 import com.ecommerce.e_commerce_api.service.CustomerService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/customers")
@@ -23,37 +21,39 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
-
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<CustomerResponseDTO>>getAllCustomers() {
-
+    public ResponseEntity<List<CustomerResponseDTO>> getAllCustomers() {
         return ResponseEntity.ok(customerService.getAllCustomers());
     }
 
 
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or #id==authentication.principal.id")
-    public ResponseEntity<CustomerResponseDTO> updateCustomerProfile( @PathVariable Long id,@Valid @RequestBody UpdateCustomerRequestDTO requestDTO) {
-        CustomerResponseDTO updatedCustomer=customerService.updateCustomerProfile(id,requestDTO);
+    @PutMapping("/{customerCode}")
+
+    @PreAuthorize("hasRole('ADMIN') or #customerCode == authentication.principal.customerCode")
+    public ResponseEntity<CustomerResponseDTO> updateCustomerProfile(
+            @PathVariable UUID customerCode,
+            @Valid @RequestBody UpdateCustomerRequest requestDTO) {
+
+        CustomerResponseDTO updatedCustomer = customerService.updateCustomerProfile(customerCode, requestDTO);
         return ResponseEntity.ok(updatedCustomer);
-
-
     }
 
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or #id==authentication.principal.id ")
-    public ResponseEntity<CustomerResponseDTO> getCustomeProfile(@PathVariable Long id) {
-        CustomerResponseDTO customerDTO = customerService.getCustomerProfileById(id);
+    @GetMapping("/{customerCode}")
+
+    @PreAuthorize("hasRole('ADMIN') or #customerCode == authentication.principal.customerCode")
+    public ResponseEntity<CustomerResponseDTO> getCustomerProfile(@PathVariable UUID customerCode) {
+
+        CustomerResponseDTO customerDTO = customerService.getCustomerProfileByCode(customerCode);
         return ResponseEntity.ok(customerDTO);
     }
 
-
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{customerCode}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
-        customerService.deleteCustomer(id);
+    public ResponseEntity<Void> deleteCustomer(@PathVariable UUID customerCode) {
+
+        customerService.deleteCustomer(customerCode);
         return ResponseEntity.noContent().build();
     }
 }

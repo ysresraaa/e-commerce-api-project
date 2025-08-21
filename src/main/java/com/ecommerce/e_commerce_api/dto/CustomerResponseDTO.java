@@ -7,7 +7,7 @@ import lombok.Data;
 @Builder
 public class CustomerResponseDTO {
 
-    private Long id;
+    private String customerCode;
     private String fullName;
     private String email;
 

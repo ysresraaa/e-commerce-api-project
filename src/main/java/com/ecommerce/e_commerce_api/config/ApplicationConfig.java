@@ -2,7 +2,7 @@ package com.ecommerce.e_commerce_api.config;
 
 
 
-import com.ecommerce.e_commerce_api.repository.ICustomerRepository;
+import com.ecommerce.e_commerce_api.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @RequiredArgsConstructor
 public class ApplicationConfig {
 
-    private final ICustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
     @Bean
     public UserDetailsService userDetailsService() {

@@ -8,32 +8,26 @@ import com.ecommerce.e_commerce_api.model.Cart;
 import com.ecommerce.e_commerce_api.model.CartItem;
 import com.ecommerce.e_commerce_api.model.Customer;
 import com.ecommerce.e_commerce_api.model.Product;
-import com.ecommerce.e_commerce_api.repository.ICartItemRepository;
-import com.ecommerce.e_commerce_api.repository.ICartRepository;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import com.ecommerce.e_commerce_api.repository.CartItemRepository;
+import com.ecommerce.e_commerce_api.repository.CartRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class CartService {
 
-    private final ICartRepository cartRepository;
-    private final ICartItemRepository cartItemRepository;
+    private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
     private final ProductService productService;
-    private final CartMapper cartMapper;
     private final CustomerService customerService;
-
-    public CartService(ICartRepository cartRepository, ICartItemRepository cartItemRepository, ProductService productService, CustomerService customerService, CartMapper cartMapper) {
-        this.cartRepository = cartRepository;
-        this.cartItemRepository = cartItemRepository;
-        this.productService = productService;
-        this.customerService = customerService;
-        this.cartMapper = cartMapper;
-    }
+    private final CartMapper cartMapper;
+    private final AuthenticationService authenticationService;
 
     @Transactional(readOnly = true)
     public CartResponseDTO getCartForCurrentUser() {
@@ -42,15 +36,16 @@ public class CartService {
     }
 
     @Transactional
-    public CartResponseDTO addProductToCart(Long productId, int quantity) {
+    public CartResponseDTO addProductToCart(UUID productCode, int quantity) {
         if (quantity <= 0) {
             throw new IllegalArgumentException("Quantity must be positive.");
         }
+
         Cart cart = getCartModelForCurrentUser();
-        Product product = productService.findProductEntityById(productId);
+        Product product = productService.findProductEntityByCode(productCode);
 
         Optional<CartItem> existingItemOptional = cart.getItems().stream()
-                .filter(item -> item.getProduct().getId().equals(productId))
+                .filter(item -> item.getProduct().getProductCode().equals(productCode))
                 .findFirst();
 
         if (existingItemOptional.isPresent()) {
@@ -78,12 +73,12 @@ public class CartService {
     }
 
     @Transactional
-    public CartResponseDTO removeProductFromCart(Long productId) {
+    public CartResponseDTO removeProductFromCart(UUID productCode) {
         Cart cart = getCartModelForCurrentUser();
         CartItem itemToRemove = cart.getItems().stream()
-                .filter(item -> item.getProduct().getId().equals(productId))
+                .filter(item -> item.getProduct().getProductCode().equals(productCode))
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found in cart with ID: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found in cart with code: " + productCode));
 
         cart.getItems().remove(itemToRemove);
         cartItemRepository.delete(itemToRemove);
@@ -96,29 +91,28 @@ public class CartService {
     @Transactional
     public void clearCartForCurrentUser() {
         Cart cart = getCartModelForCurrentUser();
-        cartItemRepository.deleteAllInBatch(cart.getItems());
-        cart.getItems().clear();
+        if (cart.getItems() != null && !cart.getItems().isEmpty()) {
+            cartItemRepository.deleteAllInBatch(cart.getItems());
+            cart.getItems().clear();
+        }
         cart.setTotalPrice(BigDecimal.ZERO);
         cartRepository.save(cart);
     }
 
     @Transactional(readOnly = true)
-    public Cart getCartModelByCustomerId(Long customerId) {
-        Customer customer = customerService.findCustomerEntityById(customerId);
+    public Cart getCartModelByCustomerCode(UUID customerCode) {
+        Customer customer = customerService.findCustomerEntityByCode(customerCode);
         return cartRepository.findByCustomer(customer)
                 .orElseGet(() -> createCartForCustomer(customer));
     }
 
-    private Customer getAuthenticatedCustomer() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof Customer)) {
-            throw new org.springframework.security.access.AccessDeniedException("User not authenticated or principal is not of expected type Customer.");
-        }
-        return (Customer) authentication.getPrincipal();
-    }
-
     private Cart getCartModelForCurrentUser() {
-        Customer customer = getAuthenticatedCustomer();
+        // CORRECTED: Directly get the UUID code required by the next line.
+        UUID customerCode = authenticationService.getAuthenticatedCustomerCode();
+
+        // Now the 'customerCode' variable exists and can be used here.
+        Customer customer = customerService.findCustomerEntityByCode(customerCode);
+
         return cartRepository.findByCustomer(customer)
                 .orElseGet(() -> createCartForCustomer(customer));
     }
@@ -131,6 +125,10 @@ public class CartService {
     }
 
     private void recalculateCartTotalPrice(Cart cart) {
+        if (cart.getItems() == null) {
+            cart.setTotalPrice(BigDecimal.ZERO);
+            return;
+        }
         BigDecimal total = cart.getItems().stream()
                 .map(item -> item.getPrice().multiply(new BigDecimal(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

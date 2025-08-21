@@ -13,20 +13,21 @@ import java.util.stream.Collectors;
 
 public class ModelMapper {
 
-    public static ProductResponseDTO toProductResponse(Product product){
+    public static ProductResponseDTO toProductResponse(Product product) {
         return ProductResponseDTO.builder()
-                .id(product.getId())
+                .productCode(product.getProductCode().toString())
                 .name(product.getName())
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .stock(product.getStock())
                 .build();
     }
+
     public static CustomerResponseDTO toCustomerResponse(Customer customer) {
         String fullName = customer.getFirstName() + " " + customer.getLastName();
 
         return CustomerResponseDTO.builder()
-                .id(customer.getId())
+                .customerCode(customer.getCustomerCode().toString())
                 .fullName(fullName)
                 .email(customer.getEmail())
                 .build();
@@ -34,26 +35,24 @@ public class ModelMapper {
 
     public static OrderItemResponseDTO toOrderItemResponse(OrderItem orderItem) {
         return OrderItemResponseDTO.builder()
-                .productId(orderItem.getProduct().getId())
+                .productCode(orderItem.getProduct().getProductCode().toString())
                 .productName(orderItem.getProduct().getName())
                 .quantity(orderItem.getQuantity())
-                .price(orderItem.getPrice())
+                .price(orderItem.getPriceAtPurchase())
                 .build();
     }
 
     public static OrderResponseDTO toOrderResponse(Order order) {
         return OrderResponseDTO.builder()
-                .id(order.getId())
-                .customerId(order.getCustomer().getId())
+                .customerCode(order.getCustomer().getCustomerCode().toString())
                 .customerName(order.getCustomer().getFirstName() + " " + order.getCustomer().getLastName())
-                .items(order.getItems().stream()
+                .items(order.getOrderItems().stream()
                         .map(ModelMapper::toOrderItemResponse)
                         .collect(Collectors.toList()))
                 .totalPrice(order.getTotalPrice())
                 .status(order.getStatus())
                 .orderDate(order.getOrderDate())
-                .orderCode(order.getOrderCode())
+                .orderCode(order.getOrderCode().toString())
                 .build();
     }
 }
-

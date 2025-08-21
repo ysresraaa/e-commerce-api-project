@@ -12,14 +12,17 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface OrderMapper {
 
-
     List<OrderResponseDTO> toResponseDTOList(List<Order> orders);
 
-    @Mapping(source = "customer.id", target = "customerId")
-    @Mapping(source = "customer.fullName", target = "customerName")
+    @Mapping(target = "customerName", expression = "java(order.getCustomer().getFirstName() + \" \" + order.getCustomer().getLastName())")
+    @Mapping(source = "customer.customerCode", target = "customerCode")
+    @Mapping(source = "orderItems", target = "items")
+    @Mapping(source = "orderCode", target = "orderCode")
     OrderResponseDTO toResponseDTO(Order order);
 
-    @Mapping(source = "product.id", target = "productId")
+
+    @Mapping(source = "product.productCode", target = "productCode")
     @Mapping(source = "product.name", target = "productName")
+    @Mapping(source = "priceAtPurchase", target = "price")
     OrderItemResponseDTO toOrderItemResponseDTO(OrderItem orderItem);
 }
